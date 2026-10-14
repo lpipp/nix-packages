@@ -22,11 +22,10 @@ kernel.stdenv.mkDerivation {
     builtinFile="${lib.getOutput "modules" kernel}/lib/modules/${kernel.modDirVersion}/modules.builtin"
     sh ${./check-kernel.sh} "$builtinFile"
     python3 tools/prepare_kernel.py
-    ${lib.optionalString (lib.versionOlder kernel.version "6.11") ''
-      # Linux 6.6 provides the void callback as remove_new; newer kernels
-      # use remove. Keep the callback body and lifecycle ordering intact.
-      substituteInPlace kernel/huawei-wmi.c \
-        --replace-fail '.remove = huawei_wmi_remove,' '.remove_new = huawei_wmi_remove,'
+    ${lib.optionalString (lib.versions.majorMinor kernel.version == "6.6") ''
+      # Adapt the platform removal field and integer WMI notification API.
+      # Apply after generating the driver; OEM transactions stay unchanged.
+      patch --fuzz=0 -p1 < ${./linux-6.6.patch}
     ''}
     make -C "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" \
       M="$PWD/kernel" W=1 ${lib.escapeShellArgs kernel.commonMakeFlags} modules

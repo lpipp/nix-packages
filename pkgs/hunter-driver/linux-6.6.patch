@@ -1,0 +1,36 @@
+--- a/kernel/huawei-wmi.c
++++ b/kernel/huawei-wmi.c
+@@ -597,6 +597,15 @@
+ 		dev_err(&idev->dev, "Bad response type\n");
+ }
+ 
++/* Linux 6.6 delivers the integer value instead of an ACPI object. */
++static void huawei_wmi_input_notify_legacy(u32 value, void *context)
++{
++	union acpi_object event = { .type = ACPI_TYPE_INTEGER };
++
++	event.integer.value = value;
++	huawei_wmi_input_notify(&event, context);
++}
++
+ static int huawei_wmi_input_setup(struct device *dev, const char *guid)
+ {
+ 	struct input_dev *idev;
+@@ -620,7 +629,7 @@
+ 	if (err)
+ 		return err;
+ 
+-	status = wmi_install_notify_handler(guid, huawei_wmi_input_notify, idev);
++	status = wmi_install_notify_handler(guid, huawei_wmi_input_notify_legacy, idev);
+ 	if (ACPI_FAILURE(status))
+ 		return -EIO;
+ 
+@@ -716,7 +725,7 @@
+ 		.pm = pm_sleep_ptr(&hunter_pm_ops),
+ 	},
+ 	.probe = huawei_wmi_probe,
+-	.remove = huawei_wmi_remove,
++	.remove_new = huawei_wmi_remove,
+ };
+ 
+ static __init int huawei_wmi_init(void)

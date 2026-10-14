@@ -29,7 +29,7 @@ Hunter 源码固定为 `lpipp/hunter-light` 提交 `9711bfe9d1033fb0e1ddb4fe95cd
 | 6.18 | 6.18.55 | `driver-6_18`、`module-selection-6_18` |
 | 7.2 | 7.2.9 | `driver-7_2`、`module-selection-7_2` |
 
-Linux 6.6 的平台驱动 `void` 移除回调名为 `remove_new`；Nix 包在生成驱动后仅替换对应字段名，新内核继续使用 `remove`。不修改回调内容、通信协议、硬件匹配或用户权限。CLI 版本仍为灯光 0.8.0、性能 0.3.0，驱动标识仍为 `hunter-0.8.0`。
+Linux 6.6 的平台驱动 `void` 移除回调名为 `remove_new`；WMI 通知回调接收 `u32` 整数，新内核则传递 ACPI 对象。Nix 包在生成驱动后应用 `linux-6.6.patch`：替换移除回调字段，并将旧通知值包装成整数型 ACPI 对象后交给原有热键处理函数。保留事件值与上下文，不修改移除流程、通信协议、硬件匹配或用户权限。新内核不应用该补丁。CLI 版本仍为灯光 0.8.0、性能 0.3.0，驱动标识仍为 `hunter-0.8.0`。
 
 全部检查扩展为 15 项：7 项公共 CLI/协议/权限/module 检查，以及四系列各两项驱动和合并模块树检查。CI 的 `kernels` job 按系列独立运行，确认 W=1 编译、版本、vermagic、唯一扩展驱动与 `modprobe` 的实际模块选择。实际结果以该提交的 GitHub Actions 为准；配置求值通过不等于驱动编译通过，编译通过也不等于实机功能验证。
 
