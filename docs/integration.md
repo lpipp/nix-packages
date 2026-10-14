@@ -18,6 +18,7 @@
       modules = [
         ./configuration.nix
         personalPackages.nixosModules.hunter-light
+        personalPackages.nixosModules.hunter-performance
       ];
     };
   };
@@ -28,8 +29,13 @@
 
 ```nix
 hardware.hunter-light.enable = true;
+hardware.hunter-performance.enable = true;
 ```
 
 上述是结构示例，合并到你的原 Flake，避免覆盖已有 input 或 modules。执行 `nix flake lock` 固定新增 input；已有锁定不需要全部更新。然后 `nixos-rebuild build`，构建通过后 `nixos-rebuild boot`，重启验收。
+
+只需要其中一套工具时，保留对应的 module 与启用选项即可。性能 module 安装独立的 `hunter-mode` 与 `hunter-fans`，两者均不接收参数。只启用性能工具不添加灯光权限规则；同时启用时，两套工具共用一个匹配当前内核的 `huawei_wmi` 驱动。两套 module 均不启动后台服务。
+
+已接入旧版个人仓库的用户，在系统配置中追加性能 module 与选项，再执行 `nix flake lock --update-input personalPackages`；构建、部署启动代并重启。灯光 module 的原有接入方式继续有效。
 
 此 module 不更换内核。现有内核需属于 6.18 系列且原 Huawei WMI 驱动不能是内置；更新系统 Nixpkgs 后，应重新检查实际内核与构建结果。其他硬件匹配限制仍由驱动执行，不会在未知机器上开放 Hunter 节点。

@@ -47,7 +47,7 @@ kernel.stdenv.mkDerivation {
 
   passthru = { inherit kernel; };
   meta = {
-    description = "Shared Huawei WMI driver with Hunter lighting interfaces for Linux 6.18";
+    description = "Shared Huawei WMI driver with Hunter lighting and read-only performance interfaces for Linux 6.18";
     homepage = "https://github.com/lpipp/hunter-light";
     license = lib.licenses.gpl2Only;
     platforms = [ "x86_64-linux" ];

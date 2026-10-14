@@ -10,18 +10,24 @@ https://releases.nixos.org/nixos/26.05/nixos-26.05.11527.2efa67fd26b6/nixexprs.t
 
 Hunter 源码固定为 `lpipp/hunter-light` 提交 `9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c`。驱动使用源文件校验与生成流程，在 Nix 构建目录工作，不修改上游仓库或宿主系统。版本与通信协议保持 0.8.0。
 
+性能 CLI 源码固定为 `lpipp/hunter-linux` 提交 `ad1559e89d700aa7c6becc37b79160ac418a1ccc`，包版本为 0.3.0。仅将 shell 和 `cat` 路径替换为 Nix store 绝对路径；不调用上游 Ubuntu 安装器，不构建上游旧驱动。两个 NixOS module 共用灯光源码提供的 0.8.0 驱动，其中已包含性能查询节点。
+
 首版目标内核为 6.18.55。驱动通过 `kernel.stdenv` 与 `kernel.moduleBuildDependencies` 编译；安装到 `updates/hunter`，提供 `override huawei_wmi * updates/hunter` 的 depmod 规则。NixOS 合并模块树时重新生成索引，检查实际 `modinfo` 路径与 `modprobe --show-depends`，不加载宿主机模块。
 
 2026-10-14，使用项目外置缓存的便携 Nix 2.20.6，在 Ubuntu 宿主的 Nix 构建沙箱中完成全部 7 项 `nix flake check`。6.18.55 驱动 W=1 编译通过，版本及 vermagic 匹配，合并模块树确实选中扩展驱动。上游 Ubuntu 完整测试也通过。不需要内核 API 兼容补丁，灯光协议源码保持原样。缺少内核 `vmlinux`，BTF 生成跳过；模块生成与检查成功。
+
+同日加入性能包后，全部 9 项 `nix flake check` 通过。安装后的性能 CLI 测试和性能源码协议/并发测试通过；module 检查覆盖默认关闭、灯光单独启用、性能单独启用和同时启用。三个启用组合的模块树一致，只包含一份 Hunter 扩展驱动，继续选中 `hunter-0.8.0`。驱动构建输入与首版相同，无协议或固件行为变更。性能上游仓库的 `make test` 也通过。
 
 **NixOS 实机待验收，重启和休眠恢复未验证。** 后续提交的自动构建状态以对应的 GitHub Actions 为准。
 
 检查包括：
 
 - CLI 的合法与非法命令、临时节点写入、失败退出码，以及安装后 shell 路径。
+- 安装后的性能 CLI：三种模式输出、两路 RPM、节点缺失、额外参数及空 PATH；仅在测试副本中替换 sysfs 路径，不访问宿主硬件。
+- 性能上游 C 协议、格式、重试和并发测试。
 - 上游五项 C 编解码、模式/速度、重试与并发测试，诊断脚本的离线解析和错误停止测试。
 - 实际 Nix 权限脚本仅处理三个节点、拒绝额外参数、缺失节点和节点重建。
-- module 默认关闭、启用后接入 CLI 和驱动、跟随主机内核、Overlay 及不支持内核拒绝。
+- 两个 module 默认关闭、分别启用时 CLI 独立、性能单独启用不放宽灯光权限、同时启用仅一份驱动；三个启用组合的合并模块树相同，跟随主机内核、Overlay 及不支持内核拒绝。
 - 构建守卫拒绝内置 Huawei WMI 驱动与缺失的目标内核元数据。
 - 驱动版本、vermagic、同名模块选择与依赖关系。
 - Ubuntu 独立安装、卸载和失败回滚，继续在 Ubuntu job 验证。
@@ -49,6 +55,8 @@ cat /sys/bus/platform/devices/huawei-wmi/charge_control_thresholds
 以下以普通用户执行，不加 sudo：
 
 ```sh
+hunter-mode
+hunter-fans
 hunter-light logo off
 hunter-light logo color:FF0000
 hunter-light wind off
@@ -56,6 +64,8 @@ hunter-light wind color:00FF00
 hunter-light keyboard off
 hunter-light keyboard effect:0 colors:00AAFF,00FF00,FFFF00,FF2424 speed:0
 ```
+
+性能工具启用后，先确认查询值与当前硬件状态一致。使用电脑自带性能按键切换模式，再运行 `hunter-mode` 确认值随之更新。仅启用性能 module 时，只进行性能查询及原 Huawei 功能验收；无需执行灯光命令。
 
 确认 Logo 红色、风谷整体绿色和键盘四区不同颜色。再分别执行，命令结束后各观察至少 30 秒，确认持续变色：
 

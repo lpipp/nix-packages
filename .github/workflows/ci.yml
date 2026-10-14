@@ -25,3 +25,13 @@ jobs:
           ref: 9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c
       - name: Upstream tests including Ubuntu installer rollback
         run: make test
+
+  performance-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: lpipp/hunter-linux
+          ref: ad1559e89d700aa7c6becc37b79160ac418a1ccc
+      - name: Read-only performance protocol and concurrency tests
+        run: make test

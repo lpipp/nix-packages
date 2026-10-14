@@ -17,6 +17,23 @@
         "type": "github"
       }
     },
+    "hunter-performance-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791806718,
+        "narHash": "sha256-i7ELiVgpwRAYRD5bT1qzEfG+zXzpQyaOukCXzX8tORA=",
+        "owner": "lpipp",
+        "repo": "hunter-linux",
+        "rev": "ad1559e89d700aa7c6becc37b79160ac418a1ccc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lpipp",
+        "repo": "hunter-linux",
+        "rev": "ad1559e89d700aa7c6becc37b79160ac418a1ccc",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 315532800,
@@ -32,6 +49,7 @@
     "root": {
       "inputs": {
         "hunter-light-src": "hunter-light-src",
+        "hunter-performance-src": "hunter-performance-src",
         "nixpkgs": "nixpkgs"
       }
     }

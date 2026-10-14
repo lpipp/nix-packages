@@ -1,29 +1,52 @@
-{ pkgs, nixpkgs, system, source, light, driver, module, overlay }:
+{ pkgs, nixpkgs, system, source, light, driver, module, overlay,
+  performanceSource, performance, performanceModule }:
 
 let
   inherit (pkgs) lib;
-  makeSystem = enabled: nixpkgs.lib.nixosSystem {
+  makeSystem = modules: options: nixpkgs.lib.nixosSystem {
     inherit system;
-    modules = [ module {
-      hardware.hunter-light.enable = enabled;
+    modules = modules ++ [ options {
       system.stateVersion = "26.05";
     } ];
   };
-  disabled = (makeSystem false).config;
-  enabled = (makeSystem true).config;
+  disabled = (makeSystem [ module performanceModule ] { }).config;
+  lightOnly = (makeSystem [ module ] { hardware.hunter-light.enable = true; }).config;
+  performanceOnly = (makeSystem [ performanceModule ] {
+    hardware.hunter-performance.enable = true;
+  }).config;
+  enabled = (makeSystem [ module performanceModule ] {
+    hardware.hunter-light.enable = true;
+    hardware.hunter-performance.enable = true;
+  }).config;
   permissions = import ../modules/permissions.nix { inherit pkgs; };
   moduleTree = enabled.system.modulesTree;
   kernel = enabled.boot.kernelPackages.kernel;
   selectedDriver = builtins.head enabled.boot.extraModulePackages;
   unsupported = builtins.tryEval ((pkgs.linuxPackages_6_12.callPackage
     ../pkgs/hunter-driver { src = source; }).name);
-  overlayPackage = (import nixpkgs {
+  overlayPackages = import nixpkgs {
     inherit system;
     overlays = [ overlay ];
-  }).hunter-light;
+  };
+  hasPackage = name: config: builtins.any
+    (p: (p.pname or "") == name) config.environment.systemPackages;
+  hasDriver = config:
+    builtins.length config.boot.extraModulePackages == 1
+    && builtins.length (builtins.filter (name: name == "huawei_wmi") config.boot.kernelModules) == 1
+    && (builtins.head config.boot.extraModulePackages).kernel.outPath == config.boot.kernelPackages.kernel.outPath;
 in {
   cli = light;
+  performance-cli = performance;
   driver = driver;
+
+  performance-protocol = pkgs.stdenv.mkDerivation {
+    pname = "hunter-performance-protocol-tests";
+    version = "0.3.0";
+    src = performanceSource;
+    dontConfigure = true;
+    buildPhase = "make test";
+    installPhase = "mkdir -p $out; touch $out/passed";
+  };
 
   protocol = pkgs.stdenv.mkDerivation {
     pname = "hunter-light-protocol-tests";
@@ -73,18 +96,29 @@ in {
 
   module = assert lib.assertMsg
     (!disabled.hardware.hunter-light.enable
+      && !disabled.hardware.hunter-performance.enable
+      && !disabled.hardware.hunter-driver.enable
       && disabled.boot.extraModulePackages == [ ]
       && !(builtins.elem "huawei_wmi" disabled.boot.kernelModules)
       && !(lib.hasInfix "hunter-light-permissions" disabled.services.udev.extraRules)
-      && builtins.elem "huawei_wmi" enabled.boot.kernelModules
-      && builtins.length enabled.boot.extraModulePackages == 1
-      && (builtins.head enabled.boot.extraModulePackages).kernel.outPath == kernel.outPath
+      && !hasPackage "hunter-light" disabled
+      && !hasPackage "hunter-performance" disabled
+      && hasDriver lightOnly && hasDriver performanceOnly && hasDriver enabled
+      && hasPackage "hunter-light" lightOnly
+      && !hasPackage "hunter-performance" lightOnly
+      && hasPackage "hunter-performance" performanceOnly
+      && !hasPackage "hunter-light" performanceOnly
+      && !(lib.hasInfix "hunter-light-permissions" performanceOnly.services.udev.extraRules)
+      && performanceOnly.system.modulesTree.outPath == moduleTree.outPath
+      && lightOnly.system.modulesTree.outPath == moduleTree.outPath
       && lib.hasInfix "hunter-light-permissions" enabled.services.udev.extraRules
-      && builtins.any (p: (p.pname or "") == "hunter-light") enabled.environment.systemPackages
-      && overlayPackage.version == "0.8.0"
+      && hasPackage "hunter-light" enabled
+      && hasPackage "hunter-performance" enabled
+      && overlayPackages.hunter-light.version == "0.8.0"
+      && overlayPackages.hunter-performance.version == "0.3.0"
       && !unsupported.success)
-    "hunter-light NixOS defaults, target kernel or overlay checks failed";
-    pkgs.runCommand "hunter-light-module-evaluation" { } ''
+    "Hunter NixOS defaults, independent/combined modules, target kernel or overlay checks failed";
+    pkgs.runCommand "hunter-module-evaluation" { } ''
       mkdir -p "$out"
       touch "$out/passed"
     '';
