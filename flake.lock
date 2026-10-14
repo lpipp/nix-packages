@@ -1,0 +1,41 @@
+{
+  "nodes": {
+    "hunter-light-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791874759,
+        "narHash": "sha256-uoR8x4+BwFgzaOz0zsvBx1mKZ93M5Mmeoj7CLuo1ifQ=",
+        "owner": "lpipp",
+        "repo": "hunter-light",
+        "rev": "9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lpipp",
+        "repo": "hunter-light",
+        "rev": "9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 315532800,
+        "narHash": "sha256-sZnm/oZb7SP+/h4qN22+Um6rN+H7Y4jTVl0rv4ZjrGo=",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/26.05/nixos-26.05.11527.2efa67fd26b6/nixexprs.tar.xz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/26.05/nixos-26.05.11527.2efa67fd26b6/nixexprs.tar.xz"
+      }
+    },
+    "root": {
+      "inputs": {
+        "hunter-light-src": "hunter-light-src",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

@@ -1,0 +1,114 @@
+# lpipp / nix-packages
+
+个人 Nix 软件包与 NixOS module 仓库。首个软件为 [hunter-light](https://github.com/lpipp/hunter-light) **0.8.0**，用于 HONOR Hunter / HUAWEI FRD-WX9 的 Logo、风谷与四区键盘灯。
+
+仓库存放可复现的包定义和版本锁定；Nix 下载固定源码并构建。暂未提供个人二进制缓存，依赖优先使用 NixOS 官方缓存。
+
+## 当前支持与验证
+
+| 项目 | 首版目标 |
+|---|---|
+| 系统 | x86_64-linux，NixOS 26.05 |
+| Nixpkgs | 固定发布归档，对应提交 `2efa67fd26b6` |
+| 内核 | Linux 6.18 系列，基线 6.18.55 |
+| 硬件 | HUAWEI FRD-WX9 / FRD-WX9-PCB / M1060 |
+| BIOS | 1.18 |
+| hunter-light / 驱动版本 | 0.8.0 / hunter-0.8.0 |
+
+**NixOS 实机待验收。** 原项目已在该硬件的 Ubuntu 环境验证灯光功能；这不能代替 NixOS 重启后的硬件验收。构建和测试状态见 [验证说明](docs/validation.md) 与 GitHub Actions。
+
+## 接入 NixOS
+
+在系统的 `flake.nix` 新增 input，并与系统共享 Nixpkgs：
+
+```nix
+inputs.personalPackages = {
+  url = "github:lpipp/nix-packages";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+
+在 `outputs` 参数中接收 `personalPackages`，向主机的现有 `modules` 列表追加：
+
+```nix
+personalPackages.nixosModules.hunter-light
+```
+
+在主机配置中启用：
+
+```nix
+hardware.hunter-light.enable = true;
+```
+
+module 默认关闭。启用后，安装 CLI、构建与系统内核匹配的公共驱动，注册 udev 权限规则并加载 `huawei_wmi`。不会自动更换 `boot.kernelPackages`。首版不支持其他内核系列；原 Huawei 驱动被编译为内置时也会拒绝构建。
+
+从你的系统配置目录执行，主机名替换为实际 Flake 输出名称：
+
+```sh
+nix flake lock
+sudo nixos-rebuild build --flake .#my-host
+sudo nixos-rebuild boot --flake .#my-host
+```
+
+重启进入新系统代，再按 [实机验收](docs/validation.md#实机验收) 检查。`nixos-rebuild switch` 不会自动替换已加载的同名内核模块；首次部署、驱动升级和撤销都采用 `boot` 后重启，不强制卸载运行中的驱动。
+
+## 日常使用
+
+```sh
+hunter-light logo on
+hunter-light wind off
+hunter-light keyboard color:FFFFFF
+hunter-light logo effect:1 colors:00AAFF speed:1
+hunter-light wind effect:2 colors:FF0000,00FF00,0000FF speed:1
+hunter-light keyboard effect:0 colors:00AAFF,00FF00,FFFF00,FF2424 speed:0
+hunter-light --help
+```
+
+日常控制无需 sudo。三个灯光节点权限为 **0222**，所有能访问它们的本地用户与进程均可控制灯光。权限规则仅作用于这三个固定节点；公共性能查询节点保持 `0444`，原始 WMI 和 debugfs 权限不放宽。
+
+`on` 恢复默认蓝色 `00AAFF`，颜色和模式不保存；命令完成后退出，动态效果由设备执行。完整参数规则见 [上游说明](https://github.com/lpipp/hunter-light#模式颜色组与速度)。module 不设置启动灯效，也不创建常驻灯光服务。
+
+## 包和 Overlay
+
+```sh
+nix build github:lpipp/nix-packages#hunter-light
+nix build github:lpipp/nix-packages#hunter-driver
+nix run github:lpipp/nix-packages -- --help
+```
+
+默认包为 CLI。单独安装 CLI 不会安装驱动或放宽 sysfs 权限，完整系统集成使用上述 NixOS module。
+
+`packages.x86_64-linux.hunter-driver` 针对仓库锁定的默认内核构建；NixOS module 则使用你的 `config.boot.kernelPackages`。不要把为不同内核构建的模块复制到当前系统。
+
+Overlay 提供 `pkgs.hunter-light`：
+
+```nix
+nixpkgs.overlays = [ personalPackages.overlays.default ];
+environment.systemPackages = [ pkgs.hunter-light ];
+```
+
+module 可独立使用，不要求启用 Overlay。性能命令仍是独立软件，本仓库不安装它们。
+
+## 更新与撤销
+
+维护者更新源码引用和仓库锁文件，测试通过后提交。使用者在系统配置目录仅更新此 input：
+
+```sh
+nix flake lock --update-input personalPackages
+sudo nixos-rebuild build --flake .#my-host
+sudo nixos-rebuild boot --flake .#my-host
+```
+
+重启使用新驱动。系统 Nixpkgs 若更新到其他内核系列，应先确认支持情况；不通过自动降级内核解决兼容问题。
+
+撤销时移除启用配置（或设为 `false`），重建启动代并重启。旧系统代仍可通过引导菜单恢复。仅删除 CLI 或在线移除 udev 规则不会卸载已加载驱动，也不会立即撤销现存节点的权限。
+
+## 开发与许可证
+
+```sh
+nix flake check --no-update-lock-file --print-build-logs
+```
+
+检查 CLI、C 协议和并发、Nix 权限辅助脚本、module 默认状态与实际内核选择，并构建合并模块树确认 `modprobe` 选中扩展驱动。Ubuntu 安装/卸载及回滚测试在独立 Ubuntu CI job 运行。
+
+采用 [GPL-2.0](LICENSE)。Hunter 源码固定引用上游提交，不包含预编译 Ubuntu 模块、本机原始日志或个人系统配置。驱动保留上游 Huawei 作者版权声明。来源和修改范围见 [验证说明](docs/validation.md)。

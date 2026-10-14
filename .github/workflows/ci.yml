@@ -1,0 +1,27 @@
+name: Nix packages
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: CLI, driver, protocol, permissions and module selection
+        run: nix flake check --no-update-lock-file --print-build-logs
+
+  ubuntu-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: lpipp/hunter-light
+          ref: 9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c
+      - name: Upstream tests including Ubuntu installer rollback
+        run: make test
