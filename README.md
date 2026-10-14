@@ -10,7 +10,7 @@
 |---|---|
 | 系统 | x86_64-linux，NixOS 26.05 |
 | Nixpkgs | 固定发布归档，对应提交 `2efa67fd26b6` |
-| 内核 | Linux 6.18 系列，基线 6.18.55 |
+| 内核系列 | Linux 6.6、6.12、6.18、7.2；系统默认内核不自动更换 |
 | 硬件 | HUAWEI FRD-WX9 / FRD-WX9-PCB / M1060 |
 | BIOS | 1.18 |
 | hunter-light / 驱动版本 | 0.8.0 / hunter-0.8.0 |
@@ -41,7 +41,7 @@ personalPackages.nixosModules.hunter-light
 hardware.hunter-light.enable = true;
 ```
 
-灯光 module 默认关闭。启用后，安装 CLI、构建与系统内核匹配的公共驱动，注册 udev 权限规则并加载 `huawei_wmi`。不会自动更换 `boot.kernelPackages`。首版不支持其他内核系列；原 Huawei 驱动被编译为内置时也会拒绝构建。
+灯光 module 默认关闭。启用后，安装 CLI、构建与系统内核匹配的公共驱动，注册 udev 权限规则并加载 `huawei_wmi`。不会自动更换 `boot.kernelPackages`。当前接入支持 6.6、6.12、6.18、7.2 系列；其他系列与原 Huawei 驱动被编译为内置的配置会拒绝构建。构建通过不能代替实机验收。
 
 性能工具可独立启用：向 `modules` 列表追加 `personalPackages.nixosModules.hunter-performance`，并在主机配置设置：
 
@@ -95,6 +95,14 @@ nix run github:lpipp/nix-packages -- --help
 
 `packages.x86_64-linux.hunter-driver` 针对仓库锁定的默认内核构建；NixOS module 则使用你的 `config.boot.kernelPackages`。不要把为不同内核构建的模块复制到当前系统。
 
+如需选择另一个已支持的内核系列，在主机配置中设置（可选）：
+
+```nix
+boot.kernelPackages = pkgs.linuxPackages_6_12;
+```
+
+驱动会按该内核重新构建，两个 CLI 不需要变化。同系列的补丁版本也会重新构建，但自动测试只覆盖仓库锁定的具体版本；更新 Nixpkgs 后先构建，再部署启动代并重启。
+
 Overlay 提供 `pkgs.hunter-light` 和 `pkgs.hunter-performance`：
 
 ```nix
@@ -124,6 +132,6 @@ sudo nixos-rebuild boot --flake .#my-host
 nix flake check --no-update-lock-file --print-build-logs
 ```
 
-检查 CLI、C 协议和并发、Nix 权限辅助脚本、module 默认状态与实际内核选择，并构建合并模块树确认 `modprobe` 选中扩展驱动。Ubuntu 安装/卸载及回滚测试在独立 Ubuntu CI job 运行。
+检查 CLI、C 协议和并发、Nix 权限辅助脚本、module 默认状态，并对四个内核系列分别编译驱动、核对 vermagic 和合并模块树中的实际选择。GitHub CI 按内核拆成独立 job，Ubuntu 安装/卸载及回滚测试继续在独立 Ubuntu CI job 运行。
 
 采用 [GPL-2.0](LICENSE)。Hunter 源码固定引用上游提交，不包含预编译 Ubuntu 模块、本机原始日志或个人系统配置。驱动保留上游 Huawei 作者版权声明。来源和修改范围见 [验证说明](docs/validation.md)。

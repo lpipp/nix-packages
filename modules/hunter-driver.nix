@@ -2,6 +2,7 @@
 
 let
   cfg = config.hardware.hunter-driver;
+  supportedKernels = import ../pkgs/hunter-driver/supported-kernels.nix;
 in {
   options.hardware.hunter-driver = {
     enable = lib.mkOption {
@@ -24,8 +25,9 @@ in {
         message = "Hunter modules support x86_64-linux only";
       }
       {
-        assertion = lib.versions.majorMinor config.boot.kernelPackages.kernel.version == "6.18";
-        message = "Hunter modules currently require a Linux 6.18 kernel";
+        assertion = builtins.elem
+          (lib.versions.majorMinor config.boot.kernelPackages.kernel.version) supportedKernels;
+        message = "Hunter modules support Linux series: ${lib.concatStringsSep ", " supportedKernels}";
       }
     ];
     boot.extraModulePackages = [

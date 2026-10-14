@@ -10,7 +10,8 @@ in {
   options.hardware.hunter-performance.enable = lib.mkEnableOption ''
     Hunter FRD-WX9 read-only mode and fan queries with the shared Huawei
     driver. The query nodes are readable by all local users (0444).
-    Linux 6.18 and BIOS 1.18 are the initial support target
+    Supported kernel series are checked by the shared driver module;
+    BIOS 1.18 is the initial hardware support target
   '';
 
   config = lib.mkIf cfg.enable {

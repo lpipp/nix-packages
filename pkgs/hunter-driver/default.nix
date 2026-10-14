@@ -1,7 +1,10 @@
 { lib, kernel, python3, kmod, src }:
 
-assert lib.assertMsg (lib.versions.majorMinor kernel.version == "6.18")
-  "hunter-driver: this package currently supports Linux 6.18 only";
+let
+  supportedKernels = import ./supported-kernels.nix;
+in
+assert lib.assertMsg (builtins.elem (lib.versions.majorMinor kernel.version) supportedKernels)
+  "hunter-driver: supported Linux series: ${lib.concatStringsSep ", " supportedKernels}";
 
 kernel.stdenv.mkDerivation {
   pname = "hunter-driver";
@@ -19,6 +22,12 @@ kernel.stdenv.mkDerivation {
     builtinFile="${lib.getOutput "modules" kernel}/lib/modules/${kernel.modDirVersion}/modules.builtin"
     sh ${./check-kernel.sh} "$builtinFile"
     python3 tools/prepare_kernel.py
+    ${lib.optionalString (lib.versionOlder kernel.version "6.11") ''
+      # Linux 6.6 provides the void callback as remove_new; newer kernels
+      # use remove. Keep the callback body and lifecycle ordering intact.
+      substituteInPlace kernel/huawei-wmi.c \
+        --replace-fail '.remove = huawei_wmi_remove,' '.remove_new = huawei_wmi_remove,'
+    ''}
     make -C "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" \
       M="$PWD/kernel" W=1 ${lib.escapeShellArgs kernel.commonMakeFlags} modules
     runHook postBuild
@@ -47,7 +56,7 @@ kernel.stdenv.mkDerivation {
 
   passthru = { inherit kernel; };
   meta = {
-    description = "Shared Huawei WMI driver with Hunter lighting and read-only performance interfaces for Linux 6.18";
+    description = "Shared Huawei WMI driver with Hunter lighting and read-only performance interfaces";
     homepage = "https://github.com/lpipp/hunter-light";
     license = lib.licenses.gpl2Only;
     platforms = [ "x86_64-linux" ];

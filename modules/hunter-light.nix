@@ -11,7 +11,8 @@ in {
   options.hardware.hunter-light.enable = lib.mkEnableOption ''
     Hunter FRD-WX9 lighting CLI and shared Huawei driver. All local users
     may write the three lighting nodes without sudo (permissions 0222).
-    Linux 6.18 and BIOS 1.18 are the initial support target
+    Supported kernel series are checked by the shared driver module;
+    BIOS 1.18 is the initial hardware support target
   '';
 
   config = lib.mkIf cfg.enable {

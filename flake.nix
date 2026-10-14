@@ -42,7 +42,7 @@
       nixosModules.hunter-performance = performanceModule;
 
       checks.${system} = import ./checks {
-        inherit pkgs nixpkgs system source light driver module overlay
+        inherit pkgs nixpkgs system source light module overlay
           performanceSource performance performanceModule;
       };
     };

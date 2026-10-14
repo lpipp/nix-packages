@@ -38,4 +38,12 @@ hardware.hunter-performance.enable = true;
 
 已接入旧版个人仓库的用户，在系统配置中追加性能 module 与选项，再执行 `nix flake lock --update-input personalPackages`；构建、部署启动代并重启。灯光 module 的原有接入方式继续有效。
 
-此 module 不更换内核。现有内核需属于 6.18 系列且原 Huawei WMI 驱动不能是内置；更新系统 Nixpkgs 后，应重新检查实际内核与构建结果。其他硬件匹配限制仍由驱动执行，不会在未知机器上开放 Hunter 节点。
+此 module 不更换内核。现有内核需属于 6.6、6.12、6.18 或 7.2 系列，且原 Huawei WMI 驱动不能是内置；更新系统 Nixpkgs 后，应重新检查实际内核与构建结果。其他硬件匹配限制仍由驱动执行，不会在未知机器上开放 Hunter 节点。
+
+两个工具的启用配置与内核系列无关。若需要主动选择内核，在现有主机配置中设置，例如：
+
+```nix
+boot.kernelPackages = pkgs.linuxPackages_6_12;
+```
+
+该示例需处于已有 `{ pkgs, ... }:` module 内，且你的 Nixpkgs 应提供相应内核包。不要为安装 Hunter 工具盲目更换内核；现有的 Nvidia 等外部驱动也需在新内核下构建通过。继续使用 `nixos-rebuild build` → `boot` → 重启的部署顺序。

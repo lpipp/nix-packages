@@ -1,4 +1,4 @@
-{ pkgs, nixpkgs, system, source, light, driver, module, overlay,
+{ pkgs, nixpkgs, system, source, light, module, overlay,
   performanceSource, performance, performanceModule }:
 
 let
@@ -20,9 +20,7 @@ let
   }).config;
   permissions = import ../modules/permissions.nix { inherit pkgs; };
   moduleTree = enabled.system.modulesTree;
-  kernel = enabled.boot.kernelPackages.kernel;
-  selectedDriver = builtins.head enabled.boot.extraModulePackages;
-  unsupported = builtins.tryEval ((pkgs.linuxPackages_6_12.callPackage
+  unsupported = builtins.tryEval ((pkgs.linuxPackages_6_1.callPackage
     ../pkgs/hunter-driver { src = source; }).name);
   overlayPackages = import nixpkgs {
     inherit system;
@@ -37,7 +35,6 @@ let
 in {
   cli = light;
   performance-cli = performance;
-  driver = driver;
 
   performance-protocol = pkgs.stdenv.mkDerivation {
     pname = "hunter-performance-protocol-tests";
@@ -123,18 +120,6 @@ in {
       touch "$out/passed"
     '';
 
-  module-selection = pkgs.runCommand "hunter-light-module-selection" {
-    nativeBuildInputs = [ pkgs.kmod ];
-  } ''
-    tree=${moduleTree}
-    selected=$(modinfo -b "$tree" -k ${kernel.modDirVersion} -n huawei_wmi)
-    expected=${selectedDriver}/lib/modules/${kernel.modDirVersion}/updates/hunter/huawei-wmi.ko
-    test "$(readlink -f "$selected")" = "$expected"
-    test "$(modinfo -F version "$selected")" = hunter-0.8.0
-    modprobe -d "$tree" -S ${kernel.modDirVersion} --show-depends huawei_wmi > dependencies
-    grep -F '/updates/hunter/huawei-wmi.ko' dependencies
-    mkdir -p "$out"
-    cp dependencies "$out/"
-    printf '%s\n' "$selected" > "$out/selected-module"
-  '';
+} // import ./kernel-matrix.nix {
+  inherit pkgs nixpkgs system source module performanceModule;
 }
