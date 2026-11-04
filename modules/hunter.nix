@@ -11,6 +11,11 @@
     boot.kernelModules = [ "huawei_wmi" ];
     environment.systemPackages = [ (pkgs.callPackage ../pkgs/hunter.nix { inherit src; }) ];
 
+    # The kernel refuses world-writable sysfs files; let every user switch the lights.
+    services.udev.extraRules = ''
+      ACTION=="add|bind", SUBSYSTEM=="platform", KERNEL=="huawei-wmi", DRIVER=="huawei-wmi", RUN+="${pkgs.coreutils}/bin/chmod 0222 /sys%p/hunter_light/logo /sys%p/hunter_light/keyboard /sys%p/hunter_light/wind"
+    '';
+
     # aggregateModules skips as many modules.dep lines as modules.order has,
     # which drops the certificate of a module replacing an in-tree one.
     # Collect the certificate of every selected external module instead.
