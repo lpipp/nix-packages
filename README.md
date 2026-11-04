@@ -10,13 +10,13 @@
 |---|---|
 | 系统 | x86_64-linux，NixOS 26.05 |
 | Nixpkgs | 固定发布归档，对应提交 `2efa67fd26b6` |
-| 内核系列 | Linux 6.6、6.12、6.18、7.2；系统默认内核不自动更换 |
+| 内核构建目标 | Linux 6.6、6.12、6.18、7.2、7.3；系统默认内核不自动更换；7.3 启动加载和只读查询已验证 |
 | 硬件 | HUAWEI FRD-WX9 / FRD-WX9-PCB / M1060 |
 | BIOS | 1.18 |
 | hunter-light / 驱动版本 | 0.8.0 / hunter-0.8.0 |
 | hunter-performance 版本 | 0.3.0 |
 
-**NixOS 实机待验收。** 原项目已在该硬件的 Ubuntu 环境验证灯光功能；这不能代替 NixOS 重启后的硬件验收。构建和测试状态见 [验证说明](docs/validation.md) 与 GitHub Actions。
+**NixOS 7.3.0 重启后的驱动加载、节点权限及模式/风扇查询已验证；可见灯效与休眠恢复待验收。** 原项目在同型号硬件 Ubuntu 环境中的灯光验证不能替代 NixOS 的可见灯效验收。构建和测试状态见 [验证说明](docs/validation.md) 与 GitHub Actions。
 
 ## 接入 NixOS
 
@@ -41,7 +41,7 @@ personalPackages.nixosModules.hunter-light
 hardware.hunter-light.enable = true;
 ```
 
-灯光 module 默认关闭。启用后，安装 CLI、构建与系统内核匹配的公共驱动，注册 udev 权限规则并加载 `huawei_wmi`。不会自动更换 `boot.kernelPackages`。当前接入支持 6.6、6.12、6.18、7.2 系列；其他系列与原 Huawei 驱动被编译为内置的配置会拒绝构建。构建通过不能代替实机验收。
+灯光 module 默认关闭。启用后，安装 CLI、构建与系统内核匹配的公共驱动，注册 udev 权限规则并加载 `huawei_wmi`。不会自动更换 `boot.kernelPackages`。当前允许构建 6.6、6.12、6.18、7.2、7.3 系列；7.3.0 已完成驱动编译、签名、证书聚合、模块选择以及重启后的加载和只读查询检查，灯效与休眠恢复待验收，详见验证说明。其他系列与原 Huawei 驱动被编译为内置的配置会拒绝构建。构建通过不能代替实机验收。
 
 性能工具可独立启用：向 `modules` 列表追加 `personalPackages.nixosModules.hunter-performance`，并在主机配置设置：
 
@@ -132,6 +132,6 @@ sudo nixos-rebuild boot --flake .#my-host
 nix flake check --no-update-lock-file --print-build-logs
 ```
 
-检查 CLI、C 协议和并发、Nix 权限辅助脚本、module 默认状态，并对四个内核系列分别编译驱动、核对 vermagic 和合并模块树中的实际选择。GitHub CI 按内核拆成独立 job，Ubuntu 安装/卸载及回滚测试继续在独立 Ubuntu CI job 运行。
+检查 CLI、C 协议和并发、Nix 权限辅助脚本、module 默认状态，并对所选 Nixpkgs 提供的目标内核系列分别编译驱动、核对 vermagic 和合并模块树中的实际选择。默认发布归档覆盖原有四个系列；GitHub CI 另以固定的 unstable 提交检查 6.18 和 7.3 的签名、证书及模块聚合。CI 配置不代表构建已通过，结果见 [验证说明](docs/validation.md)。Ubuntu 安装/卸载及回滚测试继续在独立 Ubuntu CI job 运行。
 
 采用 [GPL-2.0](LICENSE)。Hunter 源码固定引用上游提交，不包含预编译 Ubuntu 模块、本机原始日志或个人系统配置。驱动保留上游 Huawei 作者版权声明。来源和修改范围见 [验证说明](docs/validation.md)。

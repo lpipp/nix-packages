@@ -1,7 +1,10 @@
-{ lib, kernel, python3, kmod, src }:
+{ lib, kernel, kernelModuleMakeFlags, python3, kmod, src }:
 
 let
   supportedKernels = import ./supported-kernels.nix;
+  usesModuleCertificates = builtins.any
+    (flag: lib.hasPrefix "cmd_sign=" flag && lib.hasInfix "kmodigest" flag)
+    kernelModuleMakeFlags;
 in
 assert lib.assertMsg (builtins.elem (lib.versions.majorMinor kernel.version) supportedKernels)
   "hunter-driver: supported Linux series: ${lib.concatStringsSep ", " supportedKernels}";
@@ -34,8 +37,12 @@ kernel.stdenv.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    install -Dm644 kernel/huawei-wmi.ko \
-      "$out/lib/modules/${kernel.modDirVersion}/updates/hunter/huawei-wmi.ko"
+    # Kbuild runs Nixpkgs' module signing hook and emits the .ko.cer file
+    # required by newer module aggregators. Keep the existing uncompressed path.
+    make -C "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" \
+      M="$PWD/kernel" ${lib.escapeShellArgs kernelModuleMakeFlags} \
+      INSTALL_MOD_PATH="$out" INSTALL_MOD_DIR=updates/hunter \
+      CONFIG_MODULE_COMPRESS_ALL= modules_install
     mkdir -p "$out/etc/depmod.d"
     printf '%s\n' 'override huawei_wmi * updates/hunter' \
       > "$out/etc/depmod.d/hunter-light.conf"
@@ -50,6 +57,11 @@ kernel.stdenv.mkDerivation {
     test "$(modinfo -F version "$module")" = hunter-0.8.0
     set -- $(modinfo -F vermagic "$module")
     test "$1" = "${kernel.modDirVersion}"
+    ${lib.optionalString usesModuleCertificates ''
+      test -s "$module.cer"
+      # kmodigest signatures need not contain a human-readable signer name.
+      test "$(modinfo -F sig_id "$module")" = 'PKCS#7'
+    ''}
     runHook postInstallCheck
   '';
 

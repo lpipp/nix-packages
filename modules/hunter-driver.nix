@@ -19,6 +19,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    nixpkgs.overlays = [ (import ./module-certificates.nix { inherit lib; }) ];
     assertions = [
       {
         assertion = pkgs.stdenv.hostPlatform.system == "x86_64-linux";
