@@ -1,55 +1,40 @@
 {
   "nodes": {
-    "hunter-light-src": {
+    "hunter-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1791874759,
-        "narHash": "sha256-uoR8x4+BwFgzaOz0zsvBx1mKZ93M5Mmeoj7CLuo1ifQ=",
-        "owner": "lpipp",
-        "repo": "hunter-light",
-        "rev": "9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "lpipp",
-        "repo": "hunter-light",
-        "rev": "9711bfe9d1033fb0e1ddb4fe95cd0fa245fcf96c",
-        "type": "github"
-      }
-    },
-    "hunter-performance-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1791806718,
-        "narHash": "sha256-i7ELiVgpwRAYRD5bT1qzEfG+zXzpQyaOukCXzX8tORA=",
+        "lastModified": 1793799550,
+        "narHash": "sha256-NXmjT1detReeSpJVL04/pVvgtOsoMrjysdGfUzHZfd8=",
         "owner": "lpipp",
         "repo": "hunter-linux",
-        "rev": "ad1559e89d700aa7c6becc37b79160ac418a1ccc",
+        "rev": "469b4d42b6fb51a04efefa6a5334fcb0463f2404",
         "type": "github"
       },
       "original": {
         "owner": "lpipp",
         "repo": "hunter-linux",
-        "rev": "ad1559e89d700aa7c6becc37b79160ac418a1ccc",
         "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 315532800,
-        "narHash": "sha256-sZnm/oZb7SP+/h4qN22+Um6rN+H7Y4jTVl0rv4ZjrGo=",
-        "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/26.05/nixos-26.05.11527.2efa67fd26b6/nixexprs.tar.xz"
+        "lastModified": 1793726008,
+        "narHash": "sha256-jQp1wKvbwWdLBASTXkSi/VYmDJ5AbBi1WvcMt9HWJC8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "1d060086d60cb76a40cf37109f979d88a5bd6396",
+        "type": "github"
       },
       "original": {
-        "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/26.05/nixos-26.05.11527.2efa67fd26b6/nixexprs.tar.xz"
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "hunter-light-src": "hunter-light-src",
-        "hunter-performance-src": "hunter-performance-src",
+        "hunter-src": "hunter-src",
         "nixpkgs": "nixpkgs"
       }
     }
