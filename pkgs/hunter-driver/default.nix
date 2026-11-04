@@ -38,11 +38,16 @@ kernel.stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     # Kbuild runs Nixpkgs' module signing hook and emits the .ko.cer file
-    # required by newer module aggregators. Keep the existing uncompressed path.
+    # required by newer module aggregators. Keep the existing uncompressed path:
+    # kernels with the CONFIG_MODULE_COMPRESS_ALL gate (7.3+) take the empty
+    # value, older ones select the compression from CONFIG_MODULE_COMPRESS_*,
+    # which must be emptied as well. Command-line variables override the .config.
     make -C "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" \
       M="$PWD/kernel" ${lib.escapeShellArgs kernelModuleMakeFlags} \
       INSTALL_MOD_PATH="$out" INSTALL_MOD_DIR=updates/hunter \
-      CONFIG_MODULE_COMPRESS_ALL= modules_install
+      CONFIG_MODULE_COMPRESS_ALL= CONFIG_MODULE_COMPRESS_GZIP= \
+      CONFIG_MODULE_COMPRESS_XZ= CONFIG_MODULE_COMPRESS_ZSTD= \
+      modules_install
     mkdir -p "$out/etc/depmod.d"
     printf '%s\n' 'override huawei_wmi * updates/hunter' \
       > "$out/etc/depmod.d/hunter-light.conf"

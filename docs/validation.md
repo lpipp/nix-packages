@@ -53,7 +53,7 @@ Linux 6.6 的平台驱动 `void` 移除回调名为 `remove_new`；WMI 通知回
 
 2026-11-04 的修补针对使用 Nixpkgs `1c89083e451e891152365b799595cf7790a43325` 的系统，保留主机的 Linux 7.3 内核选择。旧包手动复制 `.ko`，绕过了新版 Nixpkgs 在 `modules_install` 中执行的 kmodigest 签名及 `.ko.cer` 生成，因而无法满足模块聚合器的要求。
 
-安装阶段改用目标内核的 `modules_install`，传递 `kernelModuleMakeFlags`、包内安装路径及 `updates/hunter` 目录。通过安装命令的 `CONFIG_MODULE_COMPRESS_ALL=` 保留现有未压缩路径，模块仍按目标内核配置编译。使用 kmodigest 时，安装检查要求 `.ko.cer` 非空且模块的 `sig_id` 为 `PKCS#7`；模块树检查同时验证聚合证书、模块版本、vermagic 和实际模块选择。kmodigest 签名不要求可读的 signer 名称非空。
+安装阶段改用目标内核的 `modules_install`，传递 `kernelModuleMakeFlags`、包内安装路径及 `updates/hunter` 目录。通过安装命令把 `CONFIG_MODULE_COMPRESS_ALL`、`CONFIG_MODULE_COMPRESS_GZIP`、`CONFIG_MODULE_COMPRESS_XZ`、`CONFIG_MODULE_COMPRESS_ZSTD` 全部置空，保留现有未压缩路径，模块仍按目标内核配置编译。7.3 的内核以 `CONFIG_MODULE_COMPRESS_ALL` 作为总开关，6.6 等较早内核没有该开关，直接从 `.config` 的 `CONFIG_MODULE_COMPRESS_*` 选择压缩方式，因此两者都要置空；命令行变量优先于 `.config`。使用 kmodigest 时，安装检查要求 `.ko.cer` 非空且模块的 `sig_id` 为 `PKCS#7`；模块树检查同时验证聚合证书、模块版本、vermagic 和实际模块选择。kmodigest 签名不要求可读的 signer 名称非空。
 
 7.3 加入允许构建列表，原有硬件匹配条件、固件协议和 6.6 兼容补丁保持不变。原固定发布归档不提供 7.3，默认矩阵只包含该归档可用的系列；新增 `unstable-kernels` CI job 固定到上述 Nixpkgs，分别构建 6.18 和 7.3 的驱动及模块树。明确指定的 7.3 检查若缺失会使 CI 失败，不会静默跳过。
 
