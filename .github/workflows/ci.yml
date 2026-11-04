@@ -24,6 +24,7 @@ jobs:
           .#checks.x86_64-linux.performance-protocol
           .#checks.x86_64-linux.permissions
           .#checks.x86_64-linux.kernel-guard
+          .#checks.x86_64-linux.module-certificates
           .#checks.x86_64-linux.module
 
   kernels:
@@ -38,6 +39,22 @@ jobs:
       - name: Driver, vermagic and merged module selection
         run: >-
           nix build --no-link --print-build-logs
+          .#checks.x86_64-linux.driver-${{ matrix.kernel }}
+          .#checks.x86_64-linux.module-selection-${{ matrix.kernel }}
+
+  unstable-kernels:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel: ["6_18", "7_3"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Driver certificates and module selection on the affected Nixpkgs
+        run: >-
+          nix build --no-link --print-build-logs --no-write-lock-file
+          --override-input nixpkgs github:NixOS/nixpkgs/1c89083e451e891152365b799595cf7790a43325
           .#checks.x86_64-linux.driver-${{ matrix.kernel }}
           .#checks.x86_64-linux.module-selection-${{ matrix.kernel }}
 

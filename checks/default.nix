@@ -91,6 +91,15 @@ in {
     touch "$out/passed"
   '';
 
+  module-certificates = pkgs.runCommand "hunter-module-certificate-tests" {
+    nativeBuildInputs = [ pkgs.python3 ];
+  } ''
+    python3 ${./test_module_certificates.py} \
+      ${../pkgs/hunter-driver/merge-module-certificates.sh} ${pkgs.runtimeShell}
+    mkdir -p "$out"
+    touch "$out/passed"
+  '';
+
   module = assert lib.assertMsg
     (!disabled.hardware.hunter-light.enable
       && !disabled.hardware.hunter-performance.enable

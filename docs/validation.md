@@ -31,11 +31,11 @@ Hunter 源码固定为 `lpipp/hunter-light` 提交 `9711bfe9d1033fb0e1ddb4fe95cd
 
 Linux 6.6 的平台驱动 `void` 移除回调名为 `remove_new`；WMI 通知回调接收 `u32` 整数，新内核则传递 ACPI 对象。Nix 包在生成驱动后应用 `linux-6.6.patch`：替换移除回调字段，并将旧通知值包装成整数型 ACPI 对象后交给原有热键处理函数。保留事件值与上下文，不修改移除流程、通信协议、硬件匹配或用户权限。新内核不应用该补丁。CLI 版本仍为灯光 0.8.0、性能 0.3.0，驱动标识仍为 `hunter-0.8.0`。
 
-全部检查扩展为 15 项：7 项公共 CLI/协议/权限/module 检查，以及四系列各两项驱动和合并模块树检查。CI 的 `kernels` job 按系列独立运行，确认 W=1 编译、版本、vermagic、唯一扩展驱动与 `modprobe` 的实际模块选择。实际结果以该提交的 GitHub Actions 为准；配置求值通过不等于驱动编译通过，编译通过也不等于实机功能验证。
+全部检查扩展为 16 项：8 项公共 CLI/协议/权限/module 检查，以及四系列各两项驱动和合并模块树检查。CI 的 `kernels` job 按系列独立运行，确认 W=1 编译、版本、vermagic、唯一扩展驱动与 `modprobe` 的实际模块选择。实际结果以该提交的 GitHub Actions 为准；配置求值通过不等于驱动编译通过，编译通过也不等于实机功能验证。
 
 未列入的系列（含 6.1、5.x 和未测试的新系列）仍被拒绝。即使同系列补丁更新，仍需使用自己的系统 Nixpkgs 重新构建；基线测试不会代替每个补丁版本或发行版内核配置的验证。NixOS 上四个系列的实机启动、灯效与休眠恢复均待验收。
 
-**NixOS 实机待验收，重启和休眠恢复未验证。** 后续提交的自动构建状态以对应的 GitHub Actions 为准。
+**该矩阵四个系列的 NixOS 实机启动、灯效与休眠恢复仍待验收。** 后续提交的自动构建状态以对应的 GitHub Actions 为准。
 
 检查包括：
 
@@ -48,6 +48,51 @@ Linux 6.6 的平台驱动 `void` 移除回调名为 `remove_new`；WMI 通知回
 - 构建守卫拒绝内置 Huawei WMI 驱动与缺失的目标内核元数据。
 - 驱动版本、vermagic、同名模块选择与依赖关系。
 - Ubuntu 独立安装、卸载和失败回滚，继续在 Ubuntu job 验证。
+
+## unstable 模块证书与 Linux 7.3
+
+2026-11-04 的修补针对使用 Nixpkgs `1c89083e451e891152365b799595cf7790a43325` 的系统，保留主机的 Linux 7.3 内核选择。旧包手动复制 `.ko`，绕过了新版 Nixpkgs 在 `modules_install` 中执行的 kmodigest 签名及 `.ko.cer` 生成，因而无法满足模块聚合器的要求。
+
+安装阶段改用目标内核的 `modules_install`，传递 `kernelModuleMakeFlags`、包内安装路径及 `updates/hunter` 目录。通过安装命令把 `CONFIG_MODULE_COMPRESS_ALL`、`CONFIG_MODULE_COMPRESS_GZIP`、`CONFIG_MODULE_COMPRESS_XZ`、`CONFIG_MODULE_COMPRESS_ZSTD` 全部置空，保留现有未压缩路径，模块仍按目标内核配置编译。7.3 的内核以 `CONFIG_MODULE_COMPRESS_ALL` 作为总开关，6.6 等较早内核没有该开关，直接从 `.config` 的 `CONFIG_MODULE_COMPRESS_*` 选择压缩方式，因此两者都要置空；命令行变量优先于 `.config`。使用 kmodigest 时，安装检查要求 `.ko.cer` 非空且模块的 `sig_id` 为 `PKCS#7`；模块树检查同时验证聚合证书、模块版本、vermagic 和实际模块选择。kmodigest 签名不要求可读的 signer 名称非空。
+
+7.3 加入允许构建列表，原有硬件匹配条件、固件协议和 6.6 兼容补丁保持不变。原固定发布归档不提供 7.3，默认矩阵只包含该归档可用的系列；新增 `unstable-kernels` CI job 固定到上述 Nixpkgs，分别构建 6.18 和 7.3 的驱动及模块树。明确指定的 7.3 检查若缺失会使 CI 失败，不会静默跳过。
+
+可独立运行新增检查，不修改主机配置或仓库锁文件：
+
+```sh
+nix build --no-link --print-build-logs --no-write-lock-file \
+  --override-input nixpkgs github:NixOS/nixpkgs/1c89083e451e891152365b799595cf7790a43325 \
+  .#checks.x86_64-linux.module-certificates \
+  .#checks.x86_64-linux.driver-7_3 \
+  .#checks.x86_64-linux.module-selection-7_3
+```
+
+本地已使用缓存源码和 `nix-instantiate --store dummy://` 完成原发布归档的 15 项及上述 unstable 的 17 项检查 derivation 求值。另在临时目录中执行修补包实际求值得到的 buildPhase、installPhase 和 installCheckPhase，使用缓存的 Linux 6.18.55 开发文件完成 W=1 编译、Kbuild 安装以及版本/vermagic 校验，确认输出仍为未压缩 `.ko`。这属于离线阶段验证，不是完整 Nix 沙箱构建，也没有更换或加载宿主内核。
+
+随后用户在本机终端完成了 Linux 7.3.0 的真实 Nix 构建。驱动通过 W=1 编译、安装、strip、签名及安装检查，版本为 `hunter-0.8.0`、vermagic 为 `7.3.0`，生成了 260 字节的 `.ko.cer`；原模块选择检查通过，选中 `updates/hunter/huawei-wmi.ko`。已核对本机输出文件和检查产物，不再将 7.3 编译列为未验证。
+
+进一步核对发现原测试存在遗漏：聚合后的 `modules.cer` 与原内核证书集合完全相同，未包含 Hunter 证书。受影响的 Nixpkgs 先跳过 `modules.order` 行数，再从 `modules.dep` 收集外部模块证书。替换同名模块后两个文件均为 7461 行，而 Hunter 位于 `modules.dep` 最后一行，因此其证书被跳过。证书集合非空并不能证明包含新驱动的证书。
+
+仓库在 Hunter module 启用时对这段聚合命令应用 overlay，改为逐个检查实际选中的模块路径；保留原内核证书集合并追加对应的非空单模块证书，缺失外部模块证书时报错。新增 `module-certificates` 检查覆盖同名替换、模块顺序、三种压缩格式、原生模块以及缺失/空证书，共 9 个用例。模块选择检查新增 Hunter 证书内容必须出现在聚合集合中的断言。
+
+该 helper 的 9 个本地回归用例已通过；对本次真实 7.3 模块树副本运行 helper 后，证书集合由 1939860 字节增长至 1940120 字节，包含 Hunter 证书且保留原内容。Nix 求值确认最终模块树使用修补后的命令。原稳定归档及 unstable 的检查现在分别为 16 项及 18 项。
+
+同日用户再次执行上述三个检查目标，补修后的真实 Nix 构建成功，9 个证书回归用例均通过，模块选择检查包含的证书内容断言通过。已独立读取最终模块树核对：集合为 1940120 字节，包含 260 字节的 Hunter 证书，选中扩展模块。至此，当前 Nixpkgs 下 Linux 7.3.0 的驱动编译、签名、模块证书聚合和实际模块选择均已验证；构建检查本身不代表驱动已在运行中加载。该修补已在 [PR #1](https://github.com/lpipp/nix-packages/pull/1) 提交评审，合并前默认分支不包含。
+
+## Linux 7.3.0 重启后验证
+
+2026-11-04，用户完成完整系统重建并重启后，直接读取运行系统确认：
+
+- `/run/current-system` 与 `/run/booted-system` 指向同一系统代，内核仍为 `7.3.0`。
+- 模块路径为启动系统模块树中的 `updates/hunter/huawei-wmi.ko`，`/sys/module/huawei_wmi/version` 为 `hunter-0.8.0`，vermagic 匹配 `7.3.0`。
+- 启动系统的 `modules.cer` 包含 Hunter 单模块证书。
+- 三个灯光节点权限均为 `0222`，两个性能查询节点均为 `0444`，三个 CLI 均已安装。
+- 未使用 sudo 执行 `hunter-mode` 返回 `0`，执行 `hunter-fans` 的一次采样为 `1974 1949` RPM。
+- Fn lock 与充电阈值节点可读，分别返回 `1` 和 `0 100`；本轮检查未写入这些节点。
+
+确认范围为启动加载、接口权限及实际只读查询。尚未执行灯光写入或观察可见灯效，也未验证性能按键切换后的读数变化及休眠恢复，不能据此宣称全部硬件功能已验收。
+
+同日按修补后的聚合逻辑复核运行系统：以启动系统模块树中内核原始的 `modules.cer`（1939860 字节）为基础，连同树内 6 个外部模块证书（5 个 NVIDIA 模块各 260 字节与 Hunter 的 260 字节）交给 `merge-module-certificates.sh`，输出 1941420 字节，与系统实际的 `modules.cer` 逐字节一致，Hunter 证书位于偏移 1940640。说明修补后的聚合结果与当前部署产物相同，不是只在合成用例中成立。系统仍通过本地路径输入接入该修补；修补见 [PR #1](https://github.com/lpipp/nix-packages/pull/1)，合并前默认分支不包含。
 
 ## 实机验收
 
