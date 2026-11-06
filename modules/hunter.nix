@@ -33,7 +33,7 @@ in {
       description = "Hunter status file for Waybar";
       wantedBy = [ "default.target" ];
       serviceConfig = {
-        ExecStart = "${hunter}/bin/hunter watch -o %t/hunter/status.json";
+        ExecStart = "${hunter}/bin/hunter watch -o %t/hunter/status.json -s waybar -S 8";
         ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p %t/hunter";
         Restart = "always";
         # The driver starts with the system; retry instead of failing on boot.

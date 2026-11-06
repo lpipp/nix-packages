@@ -3,11 +3,11 @@
     "hunter-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1793801287,
-        "narHash": "sha256-CaVsoQ9QJ319ruJYBlewDRIb2gz1b+Mm/1US7nE1QK8=",
+        "lastModified": 1793944760,
+        "narHash": "sha256-25o3A5k2x+ilXH4IOTJ9UW5s3aar2Jo2uTu3Hy7ryVo=",
         "owner": "lpipp",
         "repo": "hunter-linux",
-        "rev": "b57b4d13122ac355c35b62fbd31dcbfe26125a01",
+        "rev": "0d9235ab985114ad4f67e0667adbc1343b516206",
         "type": "github"
       },
       "original": {
